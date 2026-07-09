@@ -8,7 +8,10 @@
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="{{ url_for('index') }}">MailPing</a>
+      <a class="brand" href="{{ url_for('index') }}">
+    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="MailPing Logo" width="40" style="vertical-align: middle; margin-right: 10px;">
+    MailPing
+</a>
       <nav>
         {% if session.get("user_id") %}
           <a href="{{ url_for('dashboard') }}">Dashboard</a>
