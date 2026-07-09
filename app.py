@@ -39,6 +39,10 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
     whatsapp_number = db.Column(db.String(32))
+
+twilio_sid = db.Column(db.String(100))
+twilio_auth_token = db.Column(db.String(100))
+twilio_whatsapp_from = db.Column(db.String(50))
     gmail_token_json = db.Column(db.Text)
     last_message_id = db.Column(db.String(255))
     monitoring_enabled = db.Column(db.Boolean, default=False, nullable=False)
@@ -167,32 +171,37 @@ def format_email_alert(email_message):
 
 
 def send_whatsapp_alert(user, email_message):
-    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
-    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
-    from_number = os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886")
 
-    if (
-        not account_sid
-        or not auth_token
-        or account_sid == "your_twilio_account_sid"
-        or auth_token == "your_twilio_auth_token"
-    ):
-        raise RuntimeError("Twilio credentials are not configured.")
+    if not user.twilio_sid:
+        raise RuntimeError("Please enter your Twilio Account SID.")
+
+    if not user.twilio_auth_token:
+        raise RuntimeError("Please enter your Twilio Auth Token.")
+
+    if not user.twilio_whatsapp_from:
+        raise RuntimeError("Please enter your Twilio WhatsApp From number.")
+
     if not user.whatsapp_number:
-        raise RuntimeError("User has not configured a WhatsApp number.")
+        raise RuntimeError("Please enter your WhatsApp number.")
 
-    return Client(account_sid, auth_token).messages.create(
-        from_=from_number,
-        body=format_email_alert(email_message),
-        to=f"whatsapp:{user.whatsapp_number}",
+    client = Client(
+        user.twilio_sid,
+        user.twilio_auth_token
     )
 
+    return client.messages.create(
+        from_=user.twilio_whatsapp_from,
+        to=f"whatsapp:{user.whatsapp_number}",
+        body=format_email_alert(email_message),
+ )
+def fetch_twilio_message(user, message_sid):
 
-def fetch_twilio_message(message_sid):
-    return Client(
-        os.getenv("TWILIO_ACCOUNT_SID"),
-        os.getenv("TWILIO_AUTH_TOKEN"),
-    ).messages(message_sid).fetch()
+    client = Client(
+        user.twilio_sid,
+        user.twilio_auth_token
+    )
+
+    return client.messages(message_sid).fetch()
 
 
 def record_alert_result(user, email_message, twilio_message, error=None):
@@ -207,7 +216,7 @@ def send_and_record_alert(user, email_message, delivery_wait_seconds=3):
     twilio_message = send_whatsapp_alert(user, email_message)
     if delivery_wait_seconds:
         time.sleep(delivery_wait_seconds)
-        twilio_message = fetch_twilio_message(twilio_message.sid)
+        twilio_message = fetch_twilio_message(user,twilio_message.sid)
     record_alert_result(user, email_message, twilio_message)
     return twilio_message
 
@@ -305,12 +314,11 @@ def logout():
 @login_required
 def dashboard():
     user = current_user()
-    twilio_ready = bool(
-        os.getenv("TWILIO_ACCOUNT_SID")
-        and os.getenv("TWILIO_AUTH_TOKEN")
-        and os.getenv("TWILIO_ACCOUNT_SID") != "your_twilio_account_sid"
-        and os.getenv("TWILIO_AUTH_TOKEN") != "your_twilio_auth_token"
-    )
+twilio_ready = bool(
+    user.twilio_sid
+    and user.twilio_auth_token
+    and user.twilio_whatsapp_from
+)
     return render_template(
         "dashboard.html",
         user=user,
@@ -324,10 +332,18 @@ def dashboard():
 @login_required
 def settings():
     user = current_user()
+
     user.whatsapp_number = request.form["whatsapp_number"].strip()
+
+    user.twilio_sid = request.form["twilio_sid"].strip()
+    user.twilio_auth_token = request.form["twilio_auth_token"].strip()
+    user.twilio_whatsapp_from = request.form["twilio_whatsapp_from"].strip()
+
     user.monitoring_enabled = request.form.get("monitoring_enabled") == "on"
+
     db.session.commit()
-    flash("Settings saved.", "success")
+
+    flash("Settings saved successfully.", "success")
     return redirect(url_for("dashboard"))
 
 
@@ -345,7 +361,7 @@ def send_test_alert():
             },
         )
         time.sleep(3)
-        message = fetch_twilio_message(message.sid)
+        message = fetch_twilio_message(user,message.sid)
         record_alert_result(user, {"subject": "Test WhatsApp alert"}, message)
         db.session.commit()
     except Exception as exc:
@@ -441,14 +457,18 @@ def ensure_schema():
     if db.engine.url.get_backend_name() != "sqlite":
         return
 
-    required_columns = {
-        "last_checked_at": "DATETIME",
-        "last_alert_at": "DATETIME",
-        "last_alert_status": "VARCHAR(64)",
-        "last_alert_error": "VARCHAR(255)",
-        "last_alert_subject": "VARCHAR(255)",
-        "last_twilio_sid": "VARCHAR(64)",
-    }
+required_columns = {
+    "last_checked_at": "DATETIME",
+    "last_alert_at": "DATETIME",
+    "last_alert_status": "VARCHAR(64)",
+    "last_alert_error": "VARCHAR(255)",
+    "last_alert_subject": "VARCHAR(255)",
+    "last_twilio_sid": "VARCHAR(64)",
+
+    "twilio_sid": "VARCHAR(100)",
+    "twilio_auth_token": "VARCHAR(100)",
+    "twilio_whatsapp_from": "VARCHAR(50)",
+}
     with db.engine.connect() as connection:
         existing = {
             row[1]

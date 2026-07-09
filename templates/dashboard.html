@@ -40,10 +40,29 @@
       <section class="panel">
         <h2>WhatsApp</h2>
         <form method="post" action="{{ url_for('settings') }}">
-          <label>
-            WhatsApp number
-            <input type="tel" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" placeholder="+916300000000" required>
-          </label>
+<label>
+    Twilio Account SID
+    <input type="text"
+           name="twilio_sid"
+           value="{{ user.twilio_sid or '' }}"
+           placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+</label>
+
+<label>
+    Twilio Auth Token
+    <input type="password"
+           name="twilio_auth_token"
+           value="{{ user.twilio_auth_token or '' }}"
+           placeholder="Your Twilio Auth Token">
+</label>
+
+<label>
+    Twilio WhatsApp From
+    <input type="text"
+           name="twilio_whatsapp_from"
+           value="{{ user.twilio_whatsapp_from or 'whatsapp:+14155238886' }}"
+           placeholder="whatsapp:+14155238886">
+</label>
           <label class="check">
             <input type="checkbox" name="monitoring_enabled" {% if user.monitoring_enabled %}checked{% endif %} {% if not gmail_connected %}disabled{% endif %}>
             Enable email monitoring
