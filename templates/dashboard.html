@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}Dashboard - MailPing{% endblock %}
+
 {% block content %}
   <section class="dashboard">
     <div class="dashboard-header">
@@ -12,10 +14,30 @@
       </span>
     </div>
 
+    <section class="setup-strip">
+      <div class="step {% if gmail_connected %}done{% endif %}">
+        <span>1</span>
+        <strong>Gmail</strong>
+      </div>
+      <div class="step {% if twilio_ready %}done{% endif %}">
+        <span>2</span>
+        <strong>Twilio WhatsApp</strong>
+      </div>
+      <div class="step {% if ready_for_alerts %}done{% endif %}">
+        <span>3</span>
+        <strong>Alerts ready</strong>
+      </div>
+    </section>
+
     <div class="grid">
       <section class="panel">
-        <h2>Gmail</h2>
-        <p>{% if gmail_connected %}Connected and ready.{% else %}Connect Gmail before enabling alerts.{% endif %}</p>
+        <div class="panel-title">
+          <h2>Gmail</h2>
+          <span class="pill {% if gmail_connected %}good{% endif %}">
+            {% if gmail_connected %}Connected{% else %}Not connected{% endif %}
+          </span>
+        </div>
+        <p>Connect the inbox MailPing should watch. The app uses readonly Gmail access.</p>
         {% if user.last_checked_at %}
           <dl class="metrics">
             <div>
@@ -37,55 +59,58 @@
         {% endif %}
       </section>
 
-      <section class="panel">
-        <h2>WhatsApp</h2>
+      <section class="panel accent">
+        <div class="panel-title">
+          <h2>Twilio WhatsApp</h2>
+          <a href="{{ twilio_help_url }}" target="_blank" rel="noopener">Registration guide</a>
+        </div>
+        <p>Use your own Twilio Account SID and Auth Token. For sandbox testing, join the WhatsApp sandbox first.</p>
         <form method="post" action="{{ url_for('settings') }}">
-<label>
-    Twilio Account SID
-    <input type="text"
-           name="twilio_sid"
-           value="{{ user.twilio_sid or '' }}"
-           placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
-</label>
+          <label>
+            Twilio Account SID
+            <input type="text" name="twilio_account_sid" value="{{ user.twilio_account_sid or '' }}" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" required>
+          </label>
 
-<label>
-    Twilio Auth Token
-    <input type="password"
-           name="twilio_auth_token"
-           value="{{ user.twilio_auth_token or '' }}"
-           placeholder="Your Twilio Auth Token">
-</label>
+          <label>
+            Twilio Auth Token
+            <input type="password" name="twilio_auth_token" placeholder="{% if user.twilio_auth_token %}Saved - enter a new token to replace{% else %}Your Twilio Auth Token{% endif %}" autocomplete="off">
+          </label>
 
-<label>
-    Twilio WhatsApp From
-    <input type="text"
-           name="twilio_whatsapp_from"
-           value="{{ user.twilio_whatsapp_from or 'whatsapp:+14155238886' }}"
-           placeholder="whatsapp:+14155238886">
-</label>
+          <label>
+            Twilio WhatsApp sender
+            <input type="text" name="twilio_whatsapp_from" value="{{ user.twilio_whatsapp_from or 'whatsapp:+14155238886' }}" placeholder="whatsapp:+14155238886" required>
+          </label>
+
+          <label>
+            Your WhatsApp number
+            <input type="tel" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" placeholder="+919876543210" required>
+          </label>
+
           <label class="check">
-            <input type="checkbox" name="monitoring_enabled" {% if user.monitoring_enabled %}checked{% endif %} {% if not gmail_connected %}disabled{% endif %}>
+            <input type="checkbox" name="monitoring_enabled" {% if user.monitoring_enabled %}checked{% endif %} {% if not gmail_connected or not twilio_ready %}disabled{% endif %}>
             Enable email monitoring
           </label>
-          <button class="button" type="submit" {% if not gmail_connected %}disabled{% endif %}>Save settings</button>
+
+          <button class="button" type="submit">Save settings</button>
         </form>
         <form class="inline-form" method="post" action="{{ url_for('send_test_alert') }}">
-          <button class="button secondary" type="submit" {% if not twilio_ready or not user.whatsapp_number %}disabled{% endif %}>Send test alert</button>
+          <button class="button secondary" type="submit" {% if not twilio_ready %}disabled{% endif %}>Send test alert</button>
         </form>
       </section>
     </div>
 
     <section class="panel activity">
-      <h2>Latest WhatsApp activity</h2>
+      <div class="panel-title">
+        <h2>Latest WhatsApp activity</h2>
+        {% if user.last_alert_status %}
+          <span class="pill">{{ user.last_alert_status }}</span>
+        {% endif %}
+      </div>
       {% if user.last_alert_at %}
-        <dl class="metrics">
+        <dl class="metrics compact">
           <div>
             <dt>Time</dt>
             <dd>{{ user.last_alert_at.strftime("%Y-%m-%d %H:%M:%S UTC") }}</dd>
-          </div>
-          <div>
-            <dt>Status</dt>
-            <dd>{{ user.last_alert_status or "unknown" }}</dd>
           </div>
           <div>
             <dt>Subject</dt>
@@ -108,9 +133,5 @@
         <p>No WhatsApp alert has been sent from this account yet.</p>
       {% endif %}
     </section>
-
-    {% if not twilio_ready %}
-      <div class="alert warning">Twilio environment variables are missing, so alerts cannot be sent yet.</div>
-    {% endif %}
   </section>
 {% endblock %}

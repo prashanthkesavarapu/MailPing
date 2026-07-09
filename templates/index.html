@@ -1,14 +1,40 @@
 {% extends "base.html" %}
 
+{% block title %}MailPing - Gmail to WhatsApp alerts{% endblock %}
+
 {% block content %}
   <section class="hero">
-    <div>
+    <div class="hero-copy">
       <p class="eyebrow">Gmail to WhatsApp alerts</p>
-      <h1>Never miss an important email.</h1>
-      <p class="lead">Connect Gmail, add your WhatsApp number, and MailPing watches for new messages in the background.</p>
+      <h1>Send new-email pings to your own WhatsApp.</h1>
+      <p class="lead">MailPing connects Gmail with each user's personal Twilio WhatsApp setup, then watches quietly in the background.</p>
       <div class="actions">
         <a class="button" href="{{ url_for('register') }}">Create account</a>
         <a class="button secondary" href="{{ url_for('login') }}">Log in</a>
+      </div>
+    </div>
+
+    <div class="signal-board" aria-label="MailPing setup preview">
+      <div class="signal-row active">
+        <span class="dot"></span>
+        <div>
+          <strong>Connect Gmail</strong>
+          <small>Readonly inbox access</small>
+        </div>
+      </div>
+      <div class="signal-row active">
+        <span class="dot"></span>
+        <div>
+          <strong>Add Twilio</strong>
+          <small>Your SID, token, sender, and WhatsApp number</small>
+        </div>
+      </div>
+      <div class="signal-row">
+        <span class="dot"></span>
+        <div>
+          <strong>Receive alerts</strong>
+          <small>New mail becomes a WhatsApp ping</small>
+        </div>
       </div>
     </div>
   </section>
