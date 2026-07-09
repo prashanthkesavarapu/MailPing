@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="dashboard">
+    <div class="dashboard-header">
+      <div>
+        <p class="eyebrow">Dashboard</p>
+        <h1>Email alerts</h1>
+      </div>
+      <span class="status {% if user.monitoring_enabled %}on{% endif %}">
+        {% if user.monitoring_enabled %}Monitoring on{% else %}Monitoring off{% endif %}
+      </span>
+    </div>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Gmail</h2>
+        <p>{% if gmail_connected %}Connected and ready.{% else %}Connect Gmail before enabling alerts.{% endif %}</p>
+        {% if user.last_checked_at %}
+          <dl class="metrics">
+            <div>
+              <dt>Last checked</dt>
+              <dd>{{ user.last_checked_at.strftime("%Y-%m-%d %H:%M:%S UTC") }}</dd>
+            </div>
+            <div>
+              <dt>Check interval</dt>
+              <dd>{{ check_interval }} seconds</dd>
+            </div>
+          </dl>
+        {% endif %}
+        {% if gmail_connected %}
+          <form method="post" action="{{ url_for('disconnect_gmail') }}">
+            <button class="button secondary" type="submit">Disconnect Gmail</button>
+          </form>
+        {% else %}
+          <a class="button" href="{{ url_for('connect_gmail') }}">Connect Gmail</a>
+        {% endif %}
+      </section>
+
+      <section class="panel">
+        <h2>WhatsApp</h2>
+        <form method="post" action="{{ url_for('settings') }}">
+          <label>
+            WhatsApp number
+            <input type="tel" name="whatsapp_number" value="{{ user.whatsapp_number or '' }}" placeholder="+916300000000" required>
+          </label>
+          <label class="check">
+            <input type="checkbox" name="monitoring_enabled" {% if user.monitoring_enabled %}checked{% endif %} {% if not gmail_connected %}disabled{% endif %}>
+            Enable email monitoring
+          </label>
+          <button class="button" type="submit" {% if not gmail_connected %}disabled{% endif %}>Save settings</button>
+        </form>
+        <form class="inline-form" method="post" action="{{ url_for('send_test_alert') }}">
+          <button class="button secondary" type="submit" {% if not twilio_ready or not user.whatsapp_number %}disabled{% endif %}>Send test alert</button>
+        </form>
+      </section>
+    </div>
+
+    <section class="panel activity">
+      <h2>Latest WhatsApp activity</h2>
+      {% if user.last_alert_at %}
+        <dl class="metrics">
+          <div>
+            <dt>Time</dt>
+            <dd>{{ user.last_alert_at.strftime("%Y-%m-%d %H:%M:%S UTC") }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{{ user.last_alert_status or "unknown" }}</dd>
+          </div>
+          <div>
+            <dt>Subject</dt>
+            <dd>{{ user.last_alert_subject or "No subject" }}</dd>
+          </div>
+          {% if user.last_twilio_sid %}
+            <div>
+              <dt>Twilio SID</dt>
+              <dd>{{ user.last_twilio_sid }}</dd>
+            </div>
+          {% endif %}
+          {% if user.last_alert_error %}
+            <div>
+              <dt>Error</dt>
+              <dd>{{ user.last_alert_error }}</dd>
+            </div>
+          {% endif %}
+        </dl>
+      {% else %}
+        <p>No WhatsApp alert has been sent from this account yet.</p>
+      {% endif %}
+    </section>
+
+    {% if not twilio_ready %}
+      <div class="alert warning">Twilio environment variables are missing, so alerts cannot be sent yet.</div>
+    {% endif %}
+  </section>
+{% endblock %}

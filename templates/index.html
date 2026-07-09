@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Gmail to WhatsApp alerts</p>
+      <h1>Never miss an important email.</h1>
+      <p class="lead">Connect Gmail, add your WhatsApp number, and MailPing watches for new messages in the background.</p>
+      <div class="actions">
+        <a class="button" href="{{ url_for('register') }}">Create account</a>
+        <a class="button secondary" href="{{ url_for('login') }}">Log in</a>
+      </div>
+    </div>
+  </section>
+{% endblock %}
